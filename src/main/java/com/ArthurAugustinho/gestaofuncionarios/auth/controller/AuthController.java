@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+// Endpoint público de login que devolve JWT e dados básicos do usuário.
 public class AuthController {
 
     private final AuthService authService;

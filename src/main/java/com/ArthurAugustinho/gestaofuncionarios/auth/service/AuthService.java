@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+// Fluxo de autenticação: valida credenciais e devolve token + dados do usuário.
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;

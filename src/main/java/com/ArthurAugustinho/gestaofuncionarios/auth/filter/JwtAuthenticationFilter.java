@@ -17,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 @RequiredArgsConstructor
+// Filtro que lê o header Authorization, valida o JWT e autentica o usuário no contexto do Spring.
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
