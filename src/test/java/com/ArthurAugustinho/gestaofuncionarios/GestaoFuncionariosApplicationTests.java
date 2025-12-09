@@ -1,4 +1,4 @@
-package com.ArthurAugustinho.gestao_funcionarios;
+package com.ArthurAugustinho.gestaofuncionarios;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
