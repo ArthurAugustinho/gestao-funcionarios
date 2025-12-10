@@ -6,6 +6,7 @@ import com.ArthurAugustinho.gestaofuncionarios.funcionario.dto.FuncionarioRespon
 import com.ArthurAugustinho.gestaofuncionarios.funcionario.entity.Funcionario;
 import com.ArthurAugustinho.gestaofuncionarios.funcionario.entity.StatusFuncionario;
 import com.ArthurAugustinho.gestaofuncionarios.funcionario.repository.FuncionarioRepository;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,7 +16,7 @@ import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
-// Regras de negócio para listar e criar funcionários.
+// Regras de negócio de funcionários: filtra lista, busca por id, cria/atualiza/apaga com validação simples.
 public class FuncionarioService {
 
     private final FuncionarioRepository funcionarioRepository;
@@ -34,10 +35,12 @@ public class FuncionarioService {
                 .collect(Collectors.toList());
     }
 
+    public FuncionarioResponse buscarPorId(Long id) {
+        return toResponse(getByIdOrThrow(id));
+    }
+
     public FuncionarioResponse criar(FuncionarioRequest request) {
-        if (request.getDataAdmissao() == null || request.getDataAdmissao().isAfter(java.time.LocalDate.now())) {
-            throw new BusinessException("Data de admissão não pode ser futura"); // Regra simples de negócio.
-        }
+        validarDataAdmissao(request.getDataAdmissao());
 
         LocalDateTime now = LocalDateTime.now();
         Funcionario funcionario = new Funcionario();
@@ -50,6 +53,35 @@ public class FuncionarioService {
 
         Funcionario saved = funcionarioRepository.save(funcionario);
         return toResponse(saved);
+    }
+
+    public FuncionarioResponse atualizar(Long id, FuncionarioRequest request) {
+        Funcionario existente = getByIdOrThrow(id);
+        validarDataAdmissao(request.getDataAdmissao());
+
+        existente.setNome(request.getNome());
+        existente.setDataAdmissao(request.getDataAdmissao());
+        existente.setSalario(request.getSalario());
+        existente.setStatus(request.getStatus());
+        existente.setUpdatedAt(LocalDateTime.now());
+
+        return toResponse(funcionarioRepository.save(existente));
+    }
+
+    public void deletar(Long id) {
+        Funcionario existente = getByIdOrThrow(id);
+        funcionarioRepository.delete(existente);
+    }
+
+    private Funcionario getByIdOrThrow(Long id) {
+        return funcionarioRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Funcionario nao encontrado"));
+    }
+
+    private void validarDataAdmissao(LocalDate dataAdmissao) {
+        if (dataAdmissao == null || dataAdmissao.isAfter(LocalDate.now())) {
+            throw new BusinessException("Data de admissao nao pode ser futura");
+        }
     }
 
     private FuncionarioResponse toResponse(Funcionario funcionario) {

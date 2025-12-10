@@ -1,38 +1,67 @@
-# Gestão de Funcionários
+# Gestão de Colaboradores
 
-Backend em Spring Boot (Java 17) + frontend React/TypeScript (Vite) e PostgreSQL, com autenticação JWT e fluxo básico de funcionários.
+Aplicação full stack para gestão de funcionários/colaboradores: autenticação, cadastro, listagem, edição, filtro por status, exclusão e gestão de usuários. Desenvolvida como solução de um teste prático para vaga Java Web / Full Stack.
 
-## Tecnologias
-- Java 17 / Spring Boot (JPA, Security, Flyway)
-- React + TypeScript (Vite)
-- PostgreSQL
-- Docker / Docker Compose
+## Tecnologias utilizadas
+- **Backend:** Java 17, Spring Boot (Web, Data JPA, Security com JWT), Flyway, PostgreSQL
+- **Frontend:** React, TypeScript, Vite, Axios
+- **Infraestrutura:** Docker, Docker Compose, Nginx (para servir a SPA)
 
-## Executando com Docker Compose
+## Arquitetura / Organização do projeto
+- **Backend:** código Java/Spring na pasta `src/` (camadas Controller / Service / Repository / Entity).
+- **Frontend:** código React/TypeScript na pasta `frontend/`.
+- **Infra:** `docker-compose.yml` na raiz orquestrando db, backend e frontend; Dockerfile do backend na raiz; Dockerfile/Nginx do frontend em `frontend/`.
 
-1. Certifique-se de ter Docker e Docker Compose instalados.
-2. Na raiz do repositório, rode:
+## Requisitos para rodar o projeto
+- Docker instalado.
+- Docker Compose instalado.
+- (Opcional) Git para clonar o repositório.
+> Com Docker Compose não é necessário instalar Java, Node, etc.
+
+## Passo a passo para rodar a aplicação (do zero)
+1. Clonar o repositório:
+   ```bash
+   git clone <URL_DO_REPOSITORIO>
+   cd <PASTA_DO_REPOSITORIO>
+   ```
+2. Criar um `.env` na raiz a partir do `.env.example`, definindo usuário/senha do banco e variáveis de API.
+3. Subir tudo com Docker Compose:
    ```bash
    docker compose up --build
    ```
-3. Acesse o frontend em: http://localhost:3000
-4. A API estará em: http://localhost:8080
-5. Credenciais seed (admin):
-   - Email: `admin@sistema.com`
-   - Senha: `admin123`
+4. Acessos:
+   - Frontend: http://localhost:3000
+   - API: http://localhost:8080
+5. Para parar: `Ctrl + C` no terminal ou `docker compose down`.
 
-### Serviços
-- **db**: PostgreSQL com base `gestao_funcionarios`
-- **backend**: Spring Boot servindo na porta 8080
-- **frontend**: SPA servida via Nginx na porta 3000
+## Usuário padrão
+Credenciais seed (apenas para testes), criadas via Flyway V2:
+```bash
+email: admin@sistema.com
+senha: admin123
+```
 
-### Variáveis importantes
-- Backend:
-  - `SPRING_DATASOURCE_URL` (padrão: `jdbc:postgresql://db:5432/gestao_funcionarios`)
-  - `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD`
-- Frontend (build):
-  - `VITE_API_URL` (padrão no compose: `http://localhost:8080`)
+## Principais funcionalidades
+- Login na aplicação (JWT).
+- Listagem de colaboradores.
+- Filtro por nome e status (ATIVO/INATIVO).
+- Cadastro de novo colaborador.
+- Edição e exclusão de colaborador.
+- Tela de gestão de usuários (cadastro/listagem).
+> MVP focado em avaliação técnica.
 
-### Notas
-- Flyway roda na inicialização do backend; certifique-se de que o Postgres está acessível.
-- O frontend usa variáveis Vite em tempo de build; se alterar a URL da API, ajuste `VITE_API_URL` no `docker-compose.yml` ou passe por `--build-arg`.
+## Como rodar backend e frontend separadamente (opcional)
+- **Backend (local):**
+  ```bash
+  ./mvnw spring-boot:run
+  ```
+  API em `http://localhost:8080` (configure `SPRING_DATASOURCE_*` no ambiente).
+- **Frontend (local):**
+  ```bash
+  cd frontend
+  npm install
+  npm run dev
+  ```
+  Use `VITE_API_URL=http://localhost:8080` no `.env` do frontend em modo dev.
+> O caminho recomendado para teste é via Docker Compose.
+

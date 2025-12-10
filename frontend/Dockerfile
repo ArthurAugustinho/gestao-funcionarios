@@ -1,10 +1,11 @@
-# Etapa de build: instala dependências e gera os arquivos estáticos do Vite.
+# Etapa de build: instala dependências e gera o bundle do Vite.
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-ARG VITE_API_URL=http://localhost:8080
+# API interna apontando para o serviço backend no compose.
+ARG VITE_API_URL=http://backend:8080
 ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 

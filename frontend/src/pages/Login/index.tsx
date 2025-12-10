@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 // Tela de login que usa o AuthContext para chamar a API e guardar o token JWT.
@@ -58,6 +58,9 @@ export default function LoginPage() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+        <p style={{ marginTop: '1rem' }}>
+          Não tem conta? <Link to="/register">Cadastre-se</Link>
+        </p>
       </div>
     </div>
   );

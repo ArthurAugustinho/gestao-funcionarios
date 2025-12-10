@@ -1,41 +1,42 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { axiosClient } from '../../api/axiosClient';
-import type { StatusFuncionario } from './types';
+import type { Funcionario, StatusFuncionario } from './types';
+import { EmployeeFilters } from './components/EmployeeFilters';
+import { EmployeeForm, type EmployeeFormValues } from './components/EmployeeForm';
+import { EmployeeTable } from './components/EmployeeTable';
+import './styles.css';
 
-type Funcionario = {
-  id: number;
-  nome: string;
-  dataAdmissao: string;
-  salario: number;
-  status: StatusFuncionario;
-  createdAt?: string;
-  updatedAt?: string;
-};
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString('pt-BR');
+const formatCurrency = (value: number) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-type FuncionarioForm = {
-  nome: string;
-  dataAdmissao: string;
-  salario: string;
-  status: StatusFuncionario;
-};
+const toFormValues = (func: Funcionario): EmployeeFormValues => ({
+  nome: func.nome,
+  dataAdmissao: func.dataAdmissao.slice(0, 10),
+  salario: String(func.salario),
+  status: func.status,
+});
 
-const STATUS_OPTIONS: StatusFuncionario[] = ['ATIVO', 'INATIVO'];
+const toViewModel = (f: Funcionario): Funcionario => ({
+  ...f,
+  dataFormatada: formatDate(f.dataAdmissao),
+  salarioFormatado: formatCurrency(f.salario),
+});
 
-// Tela de funcionários: lista com filtros e formulário de criação usando a API real.
+// Página principal de funcionários com CRUD completo (GET, POST, PUT, DELETE) usando API autenticada.
 export default function FuncionariosPage() {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingList, setLoadingList] = useState(false);
+  const [savingCreate, setSavingCreate] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [mensagem, setMensagem] = useState<string | null>(null);
 
   const [filtroNome, setFiltroNome] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<StatusFuncionario | ''>('');
 
-  const [form, setForm] = useState<FuncionarioForm>({
-    nome: '',
-    dataAdmissao: '',
-    salario: '',
-    status: 'ATIVO',
-  });
+  const [editing, setEditing] = useState<Funcionario | null>(null);
 
   const filtros = useMemo(
     () => ({
@@ -45,172 +46,138 @@ export default function FuncionariosPage() {
     [filtroNome, filtroStatus],
   );
 
-  const carregarFuncionarios = async () => {
-    setLoading(true);
+  const carregarFuncionarios = useCallback(async () => {
+    setLoadingList(true);
     setErro(null);
     try {
-      const { data } = await axiosClient.get<Funcionario[]>('/api/funcionarios', {
-        params: filtros,
-      });
-      setFuncionarios(data);
+      const { data } = await axiosClient.get<Funcionario[]>('/api/funcionarios', { params: filtros });
+      setFuncionarios(data.map(toViewModel));
     } catch (e) {
       setErro('Não foi possível carregar os funcionários.');
     } finally {
-      setLoading(false);
+      setLoadingList(false);
     }
-  };
+  }, [filtros]);
 
   useEffect(() => {
     carregarFuncionarios();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtros.nome, filtros.status]);
+  }, [carregarFuncionarios]);
 
-  const handleCreate = async () => {
-    if (!form.nome || !form.dataAdmissao || !form.salario) {
-      setErro('Preencha todos os campos.');
+  const handleSubmit = async (values: EmployeeFormValues) => {
+    setErro(null);
+    setMensagem(null);
+    const payload = {
+      nome: values.nome,
+      dataAdmissao: values.dataAdmissao,
+      salario: Number(values.salario),
+      status: values.status,
+    };
+
+    // Editar
+    if (editing) {
+      setSavingEdit(true);
+      try {
+        await axiosClient.put(`/api/funcionarios/${editing.id}`, payload);
+        setMensagem('Funcionário atualizado com sucesso.');
+        setEditing(null);
+        await carregarFuncionarios();
+      } catch (e) {
+        setErro('Erro ao atualizar funcionário.');
+      } finally {
+        setSavingEdit(false);
+      }
       return;
     }
-    setErro(null);
-    setLoading(true);
+
+    // Criar
+    setSavingCreate(true);
     try {
-      await axiosClient.post('/api/funcionarios', {
-        nome: form.nome,
-        dataAdmissao: form.dataAdmissao,
-        salario: Number(form.salario),
-        status: form.status,
-      });
-      setForm({ nome: '', dataAdmissao: '', salario: '', status: 'ATIVO' });
+      await axiosClient.post('/api/funcionarios', payload);
+      setMensagem('Funcionário criado com sucesso.');
       await carregarFuncionarios();
     } catch (e) {
       setErro('Erro ao salvar funcionário.');
     } finally {
-      setLoading(false);
+      setSavingCreate(false);
     }
   };
 
+  const handleEdit = useCallback((funcionario: Funcionario) => {
+    setEditing(funcionario);
+    setMensagem(null);
+    setErro(null);
+  }, []);
+
+  const handleCancelEdit = () => {
+    setEditing(null);
+  };
+
+  const handleDelete = useCallback(
+    async (id: number) => {
+      const confirmar = window.confirm('Deseja realmente excluir este colaborador?');
+      if (!confirmar) return;
+      setDeletingId(id);
+      setErro(null);
+      setMensagem(null);
+      try {
+        await axiosClient.delete(`/api/funcionarios/${id}`);
+        setMensagem('Funcionário excluído com sucesso.');
+        setFuncionarios((prev) => prev.filter((f) => f.id !== id));
+      } catch (e) {
+        setErro('Erro ao excluir funcionário.');
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [],
+  );
+
+  const formInitialData = editing ? toFormValues(editing) : undefined;
+  const isSaving = editing ? savingEdit : savingCreate;
+
   return (
-    <section className="page">
-      <header className="page__header">
-        <div>
-          <p className="page__eyebrow">Funcionários</p>
-          <h2>Lista de colaboradores</h2>
-        </div>
-      </header>
+    <section className="page page--stack">
+      <div className="page__container">
+        <header className="page__header page__header--space">
+          <div className="page__titles">
+            <p className="page__breadcrumb">Home / Gestão de colaboradores</p>
+            <h1 className="page__title">Gestão de colaboradores</h1>
+            <p className="page__subtitle">Crie, edite e organize sua equipe.</p>
+          </div>
+        </header>
 
-      <div className="card" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <div>
-          <label>
-            Filtro por nome
-            <input
-              type="text"
-              value={filtroNome}
-              onChange={(e) => setFiltroNome(e.target.value)}
-              placeholder="Buscar por nome"
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            Status
-            <select
-              value={filtroStatus}
-              onChange={(e) => setFiltroStatus(e.target.value as StatusFuncionario | '')}
-            >
-              <option value="">Todos</option>
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <button className="primary" onClick={carregarFuncionarios} disabled={loading}>
-          {loading ? 'Carregando...' : 'Recarregar'}
-        </button>
-      </div>
+        <EmployeeFilters
+          nome={filtroNome}
+          status={filtroStatus}
+          onChangeNome={setFiltroNome}
+          onChangeStatus={setFiltroStatus}
+          onSearch={carregarFuncionarios}
+          loading={loadingList}
+        />
 
-      <div className="card">
-        <h3>Novo funcionário</h3>
-        <div className="auth-form">
-          <label>
-            Nome
-            <input
-              type="text"
-              value={form.nome}
-              onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
-              placeholder="Nome completo"
-            />
-          </label>
-          <label>
-            Data de admissão
-            <input
-              type="date"
-              value={form.dataAdmissao}
-              onChange={(e) => setForm((prev) => ({ ...prev, dataAdmissao: e.target.value }))}
-            />
-          </label>
-          <label>
-            Salário
-            <input
-              type="number"
-              step="0.01"
-              value={form.salario}
-              onChange={(e) => setForm((prev) => ({ ...prev, salario: e.target.value }))}
-              placeholder="0,00"
-            />
-          </label>
-          <label>
-            Status
-            <select
-              value={form.status}
-              onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value as StatusFuncionario }))}
-            >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="primary" onClick={handleCreate} disabled={loading}>
-            {loading ? 'Salvando...' : 'Salvar'}
-          </button>
-          {erro && <p className="auth-error">{erro}</p>}
-        </div>
-      </div>
+        <EmployeeForm
+          mode={editing ? 'edit' : 'create'}
+          initialData={formInitialData}
+          onSubmit={handleSubmit}
+          onCancel={editing ? handleCancelEdit : undefined}
+          loading={isSaving}
+        />
 
-      <div className="card">
-        {loading && <p>Carregando...</p>}
-        {!loading && (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Data de Admissão</th>
-                <th>Salário (R$)</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {funcionarios.map((f) => (
-                <tr key={f.id}>
-                  <td>{f.nome}</td>
-                  <td>{new Date(f.dataAdmissao).toLocaleDateString('pt-BR')}</td>
-                  <td>{f.salario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                  <td>
-                    <span className={`tag tag--${f.status.toLowerCase()}`}>{f.status}</span>
-                  </td>
-                </tr>
-              ))}
-              {!funcionarios.length && (
-                <tr>
-                  <td colSpan={4}>Nenhum funcionário encontrado.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        {erro && (
+          <div className="card card--feedback auth-error" role="alert">
+            {erro}
+          </div>
         )}
+        {mensagem && <div className="card card--feedback auth-success">{mensagem}</div>}
+
+        <EmployeeTable
+          funcionarios={funcionarios}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          deletingId={deletingId}
+        />
+
+        {loadingList && <p style={{ marginTop: '0.5rem', textAlign: 'center' }}>Carregando...</p>}
       </div>
     </section>
   );

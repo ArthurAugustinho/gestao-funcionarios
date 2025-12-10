@@ -43,7 +43,8 @@ button {
 
 .layout__brand {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1rem;
+  color: #0f172a;
 }
 
 .layout__nav {
