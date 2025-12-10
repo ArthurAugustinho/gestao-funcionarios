@@ -1,25 +1,31 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-// Tela de login simples que simula autenticação local.
+// Tela de login que usa o AuthContext para chamar a API e guardar o token JWT.
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!email || !senha) {
-      setErro('Informe email e senha');
-      return;
+    setErro(null);
+    setLoading(true);
+    try {
+      await login(email, senha);
+      const redirectTo = (location.state as { from?: Location })?.from?.pathname || '/funcionarios';
+      navigate(redirectTo, { replace: true });
+    } catch (e) {
+      setErro('Não foi possível entrar. Verifique suas credenciais.');
+    } finally {
+      setLoading(false);
     }
-    // Simula login; aqui chamaremos a API real depois.
-    login('jwt-falso', { nome: 'Usuário', email });
-    navigate('/funcionarios');
   };
 
   return (
@@ -34,6 +40,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seuemail@sistema.com"
+              required
             />
           </label>
           <label>
@@ -43,10 +50,13 @@ export default function LoginPage() {
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               placeholder="•••••••"
+              required
             />
           </label>
           {erro && <p className="auth-error">{erro}</p>}
-          <button type="submit">Entrar</button>
+          <button type="submit" disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
         </form>
       </div>
     </div>
