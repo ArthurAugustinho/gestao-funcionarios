@@ -1,6 +1,6 @@
 # Gestão de Colaboradores
 
-Aplicação full stack para gestão de funcionários/colaboradores: autenticação, cadastro, listagem, edição, filtro por status, exclusão e gestão de usuários. Desenvolvida como solução de um teste prático para vaga Java Web / Full Stack.
+Aplicação full stack para gestão de funcionários/colaboradores: autenticação, cadastro, listagem, edição, filtro por status, exclusão e gestão de usuários.
 
 ## Tecnologias utilizadas
 - **Backend:** Java 17, Spring Boot (Web, Data JPA, Security com JWT), Flyway, PostgreSQL
